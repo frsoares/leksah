@@ -168,6 +168,8 @@ mkActions =
         (editFindInc Backward) [] False
     ,AD "EditGotoLine" (__ "_Goto Line") Nothing (Just "gtk-jump")
         editGotoLine [] False
+    ,AD "EditCenterView" (__ "Center View") Nothing Nothing
+        editCenterView [] False
 
     ,AD "EditComment" (__ "_Comment") Nothing Nothing
         editComment [] False

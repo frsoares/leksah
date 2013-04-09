@@ -32,6 +32,7 @@
        <menuitem name="Find_Next" action="EditFindNext" />
        <menuitem name="Find_Previous" action="EditFindPrevious" />
        <menuitem name="_Goto Line" action="EditGotoLine" />
+       <menuitem name="_Center View" action="EditCenterView" />
        <separator/>
        <menuitem name="Comment" action="EditComment" />
        <menuitem name="Uncomment" action="EditUncomment" />
