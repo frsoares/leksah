@@ -26,6 +26,7 @@ module IDE.Metainfo.Provider (
 ,   rebuildSystemInfo
 ,   updateWorkspaceInfo
 ,   rebuildWorkspaceInfo
+,   updatePackageInfo 
 
 ,   getPackageInfo  -- Just retreive from State
 ,   getWorkspaceInfo
@@ -68,8 +69,9 @@ import IDE.Utils.ServerConnection(doServerCommand)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Distribution.PackageDescription (hsSourceDirs)
+import Debug.Trace (trace)
 
-trace a b = b
+--trace a b = b
 
 -- ---------------------------------------------------------------------
 -- Updating metadata
@@ -200,7 +202,14 @@ updateWorkspaceInfo' rebuild continuation = do
             trace "no workspace" $ modifyIDE_ (\ide -> ide{workspaceInfo = Nothing, packageInfo = Nothing})
             continuation False
         Just ws -> do
-            updatePackageInfos rebuild (wsPackages ws) $ \ _ packDescrs -> do
+            actP <- readIDE activePack
+            let currentWsPacks = trace ("updateWorkspaceInfo' packages "++ ( show $ wsPackages ws )) $ wsPackages ws
+            let groupedPacks   = groupBy (\x y -> ipdPackageId x == ipdPackageId y) $ sort currentWsPacks
+--            let eqMaybe maybeA a = if isNothing maybeA then True else fromJust maybeA == a
+            let hasActive x    = if isNothing actP then True else (fromJust actP) `elem` x
+--            let shouldRebuild  = and $ map (\x -> if hasActive x && length x > 1 then
+            let cleanWsPacks   = concat $ map (\x -> if hasActive x then [fromJust actP] else x) groupedPacks
+            updatePackageInfos rebuild (trace (show (map ipdCabalFile cleanWsPacks)) cleanWsPacks) $ \ _ packDescrs -> do
                 let dependPackIds = (nub $ concatMap pdBuildDepends packDescrs)
                                         \\ map pdPackage packDescrs
                 let packDescrsI =   case systemInfo' of
@@ -255,7 +264,7 @@ updatePackageInfos rebuild packs conts = updatePackageInfos' [] rebuild packs co
 
 updatePackageInfo :: Bool -> IDEPackage -> (Bool -> PackageDescr -> IDEAction) -> IDEAction
 updatePackageInfo rebuild idePack continuation =
-    trace ("updatePackageInfo " ++ show (ipdPackageId idePack)) $ do
+    trace ("updatePackageInfo packageId " ++ show (ipdPackageId idePack)) $ do
     workspInfoCache'     <- readIDE workspInfoCache
     let (packageMap, ic) =  case pi  `Map.lookup` workspInfoCache' of
                                 Nothing -> (Map.empty,True)
@@ -263,7 +272,7 @@ updatePackageInfo rebuild idePack continuation =
     modPairsMb <- liftIO $ mapM (\(modName, bi) -> do
             sf <- case  modName `Map.lookup` packageMap of
                         Nothing            -> findSourceFile (srcDirs' bi) haskellSrcExts modName
-                        Just (_,Nothing,_) -> findSourceFile (srcDirs' bi) haskellSrcExts modName
+                        Just (_, Nothing,_) -> findSourceFile (srcDirs' bi) haskellSrcExts modName
                         Just (_,Just fp,_) -> return (Just fp)
             return (modName, sf))
                 $ Map.toList $ ipdModules idePack
@@ -278,7 +287,7 @@ updatePackageInfo rebuild idePack continuation =
     let modWithSources       = map (\(f,s) -> (f,fromJust s)) modWith
     let modWithoutSources    = map fst $ modWithout
     -- Now see which modules have to be truely updated
-    modToUpdate <- if rebuild
+    modToUpdate <- if trace ("updatePackageInfo (modWith, modWithout) "++ show (modWithSources, modWithoutSources) ) rebuild
                             then return modWithSources
                             else liftIO $ figureOutRealSources idePack modWithSources
     trace ("updatePackageInfo modToUpdate " ++ show (map (display.fst) modToUpdate)) $

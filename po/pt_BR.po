@@ -2009,7 +2009,7 @@ msgstr "Copyright 2007-2011 Jürgen Nicklisch-Franken, Hamish Mackenzie"
 
 #: src/IDE/Command.hs:0
 msgid "An integrated development environement (IDE) for the "
-msgstr "Um ambiente de desenvolvimento integrado (IDE) para a"
+msgstr "Um ambiente de desenvolvimento integrado (IDE) para a "
 
 #: src/IDE/Command.hs:0
 msgid "programming language Haskell and the Glasgow Haskell Compiler"

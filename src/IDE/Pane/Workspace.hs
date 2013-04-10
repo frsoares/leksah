@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleInstances, ScopedTypeVariables, TypeSynonymInstances,
-             MultiParamTypeClasses, DeriveDataTypeable #-}
+             MultiParamTypeClasses, DeriveDataTypeable, DoAndIfThenElse #-}
 -----------------------------------------------------------------------------
 --
 -- Module      :  IDE.Pane.Workspace
@@ -37,6 +37,8 @@ import Control.Monad.IO.Class (MonadIO(..))
 import IDE.Utils.GUIUtils (treeViewContextMenu, __)
 import System.Glib.Properties (newAttrFromMaybeStringProperty)
 import Data.Tree (Tree(..))
+import IDE.Metainfo.Provider (rebuildWorkspaceInfo, updatePackageInfo)
+import Debug.Trace (trace)
 
 -- | Workspace pane state
 --
@@ -165,19 +167,49 @@ workspaceContextMenu ideR workspacePane theMenu = do
         sel <- getSelectionTree (treeViewC workspacePane)
                                 (workspaceStore workspacePane)
         case sel of
-            Just (_,ideP,mbExe) -> reflectIDE (workspaceTry $ workspaceActivatePackage ideP mbExe) ideR
+            Just (_,ideP,mbExe) -> do 
+                {-reflectIDE (do 
+                    workspaceTry $ workspaceActivatePackage ideP mbExe -- $ trace (show actP) mbExe
+                    --actP <- readIDE activePack
+                    --rebuildPackageInfo $ trace (show actP) ideP
+                    --rebuildWorkspaceInfo
+                    )  ideR-}
+                activatePackage ideR ideP mbExe
+                --reflectIDE rebuildWorkspaceInfo ideR
 
             otherwise     -> return ()
-    item2 `on` menuItemActivate $ reflectIDE (workspaceTry $ workspaceAddPackage) ideR
+    item2 `on` menuItemActivate $ do 
+        reflectIDE ( workspaceTry $ workspaceAddPackage ) ideR
+        reflectIDE rebuildWorkspaceInfo ideR
     item3 `on` menuItemActivate $ do
         sel <- getSelectionTree (treeViewC workspacePane)
                                 (workspaceStore workspacePane)
         case sel of
-            Just (_,ideP,_) -> reflectIDE (workspaceTry $ workspaceRemovePackage ideP) ideR
+            Just (_,ideP,_) -> do 
+                reflectIDE (do 
+                    workspaceTry $ workspaceRemovePackage ideP
+                    --rebuildWorkspaceInfo 
+                    --actP <- readIDE activePack
+                    --if isJust actP then 
+                    --    rebuildPackageInfo $ fromJust actP
+                    --else
+                    --    rebuildPackageInfo ideP
+                    ) ideR
+                reflectIDE rebuildWorkspaceInfo ideR
             otherwise     -> return ()
     menuShellAppend theMenu item1
     menuShellAppend theMenu item2
     menuShellAppend theMenu item3
+    --actP <- readIDE activePack
+    --print actP
+
+activatePackage :: IDERef -> IDEPackage -> Maybe String -> IO ()
+activatePackage ideR ideP mbExe = do 
+    reflectIDE (trace "!!!!!!!!!!!!!activatePackage called" (workspaceTry $ workspaceActivatePackage ideP mbExe) ) ideR
+    reflectIDE rebuildWorkspaceInfo ideR
+
+rebuildPackageInfo :: IDEPackage -> IDEAction
+rebuildPackageInfo idePackage = updatePackageInfo True idePackage $ (\_ _ -> triggerEventIDE (InfoChanged True) >> return () )
 
 workspaceSelect :: IDERef
                 -> IDEWorkspace
@@ -186,7 +218,7 @@ workspaceSelect :: IDERef
                 -> IO ()
 workspaceSelect ideR workspacePane path _ = do
     (_,ideP,mbExe) <- treeStoreGetValue (workspaceStore workspacePane) path
-    reflectIDE (workspaceTry $ workspaceActivatePackage ideP mbExe) ideR
+    activatePackage ideR ideP mbExe
 
 updateWorkspace :: Bool -> Bool -> IDEAction
 updateWorkspace showPane updateFileCache = do
