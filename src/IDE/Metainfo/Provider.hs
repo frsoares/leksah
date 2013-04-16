@@ -209,7 +209,6 @@ updateWorkspaceInfo' rebuild continuation = do
                                   [fromJust actP]
                               else
                                   x
---            let cleanWsPacks   = concat $ map (\x -> if isJust (hasActive x) && fromJust then [fromJust actP] else x) groupedPacks
             let cleanWsPacks = concat $ map downToOne groupedPacks
             updatePackageInfos rebuild (trace (show (map ipdCabalFile cleanWsPacks)) cleanWsPacks) $ \ _ packDescrs -> do
                 let dependPackIds = (nub $ concatMap pdBuildDepends packDescrs)
@@ -225,7 +224,6 @@ updateWorkspaceInfo' rebuild continuation = do
                 modifyIDE_ (\ide -> ide{workspaceInfo = Just
                     (GenScopeC (addOtherToScope scope1 True), GenScopeC(addOtherToScope scope2 False))})
                 -- Now care about active package
-                -- activePack      <-  readIDE activePack
                 case activePack of
                     Nothing -> do
                         modifyIDE_ (\ide -> ide{packageInfo = Nothing})
