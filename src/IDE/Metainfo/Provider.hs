@@ -26,7 +26,6 @@ module IDE.Metainfo.Provider (
 ,   rebuildSystemInfo
 ,   updateWorkspaceInfo
 ,   rebuildWorkspaceInfo
-,   updatePackageInfo 
 
 ,   getPackageInfo  -- Just retreive from State
 ,   getWorkspaceInfo
@@ -69,9 +68,8 @@ import IDE.Utils.ServerConnection(doServerCommand)
 import Control.Monad.IO.Class (MonadIO(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Distribution.PackageDescription (hsSourceDirs)
-import Debug.Trace (trace)
 
---trace a b = b
+trace a b = b
 
 -- ---------------------------------------------------------------------
 -- Updating metadata
@@ -202,13 +200,17 @@ updateWorkspaceInfo' rebuild continuation = do
             trace "no workspace" $ modifyIDE_ (\ide -> ide{workspaceInfo = Nothing, packageInfo = Nothing})
             continuation False
         Just ws -> do
-            actP <- readIDE activePack
+            activePack <- readIDE activePack
+            let actP = activePack
             let currentWsPacks = trace ("updateWorkspaceInfo' packages "++ ( show $ wsPackages ws )) $ wsPackages ws
             let groupedPacks   = groupBy (\x y -> ipdPackageId x == ipdPackageId y) $ sort currentWsPacks
---            let eqMaybe maybeA a = if isNothing maybeA then True else fromJust maybeA == a
-            let hasActive x    = if isNothing actP then True else (fromJust actP) `elem` x
---            let shouldRebuild  = and $ map (\x -> if hasActive x && length x > 1 then
-            let cleanWsPacks   = concat $ map (\x -> if hasActive x then [fromJust actP] else x) groupedPacks
+            let hasActive x    = if isNothing actP then Nothing else Just ((fromJust actP) `elem` x)
+            let downToOne x = if isJust (hasActive x) && fromJust (hasActive x) then
+                                  [fromJust actP]
+                              else
+                                  x
+--            let cleanWsPacks   = concat $ map (\x -> if isJust (hasActive x) && fromJust then [fromJust actP] else x) groupedPacks
+            let cleanWsPacks = concat $ map downToOne groupedPacks
             updatePackageInfos rebuild (trace (show (map ipdCabalFile cleanWsPacks)) cleanWsPacks) $ \ _ packDescrs -> do
                 let dependPackIds = (nub $ concatMap pdBuildDepends packDescrs)
                                         \\ map pdPackage packDescrs
@@ -223,7 +225,7 @@ updateWorkspaceInfo' rebuild continuation = do
                 modifyIDE_ (\ide -> ide{workspaceInfo = Just
                     (GenScopeC (addOtherToScope scope1 True), GenScopeC(addOtherToScope scope2 False))})
                 -- Now care about active package
-                activePack      <-  readIDE activePack
+                -- activePack      <-  readIDE activePack
                 case activePack of
                     Nothing -> do
                         modifyIDE_ (\ide -> ide{packageInfo = Nothing})

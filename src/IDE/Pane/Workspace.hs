@@ -37,11 +37,12 @@ import Control.Monad.IO.Class (MonadIO(..))
 import IDE.Utils.GUIUtils (treeViewContextMenu, __)
 import System.Glib.Properties (newAttrFromMaybeStringProperty)
 import Data.Tree (Tree(..))
-import IDE.Metainfo.Provider (rebuildWorkspaceInfo, updatePackageInfo)
-import Debug.Trace (trace)
+import IDE.Metainfo.Provider (rebuildWorkspaceInfo)
 
 -- | Workspace pane state
 --
+
+trace a b = b
 
 data IDEWorkspace   =   IDEWorkspace {
     scrolledView        ::   ScrolledWindow
@@ -168,14 +169,7 @@ workspaceContextMenu ideR workspacePane theMenu = do
                                 (workspaceStore workspacePane)
         case sel of
             Just (_,ideP,mbExe) -> do 
-                {-reflectIDE (do 
-                    workspaceTry $ workspaceActivatePackage ideP mbExe -- $ trace (show actP) mbExe
-                    --actP <- readIDE activePack
-                    --rebuildPackageInfo $ trace (show actP) ideP
-                    --rebuildWorkspaceInfo
-                    )  ideR-}
                 activatePackage ideR ideP mbExe
-                --reflectIDE rebuildWorkspaceInfo ideR
 
             otherwise     -> return ()
     item2 `on` menuItemActivate $ do 
@@ -188,28 +182,18 @@ workspaceContextMenu ideR workspacePane theMenu = do
             Just (_,ideP,_) -> do 
                 reflectIDE (do 
                     workspaceTry $ workspaceRemovePackage ideP
-                    --rebuildWorkspaceInfo 
-                    --actP <- readIDE activePack
-                    --if isJust actP then 
-                    --    rebuildPackageInfo $ fromJust actP
-                    --else
-                    --    rebuildPackageInfo ideP
                     ) ideR
                 reflectIDE rebuildWorkspaceInfo ideR
             otherwise     -> return ()
     menuShellAppend theMenu item1
     menuShellAppend theMenu item2
     menuShellAppend theMenu item3
-    --actP <- readIDE activePack
-    --print actP
 
 activatePackage :: IDERef -> IDEPackage -> Maybe String -> IO ()
 activatePackage ideR ideP mbExe = do 
     reflectIDE (trace "!!!!!!!!!!!!!activatePackage called" (workspaceTry $ workspaceActivatePackage ideP mbExe) ) ideR
     reflectIDE rebuildWorkspaceInfo ideR
 
-rebuildPackageInfo :: IDEPackage -> IDEAction
-rebuildPackageInfo idePackage = updatePackageInfo True idePackage $ (\_ _ -> triggerEventIDE (InfoChanged True) >> return () )
 
 workspaceSelect :: IDERef
                 -> IDEWorkspace

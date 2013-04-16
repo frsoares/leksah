@@ -210,7 +210,7 @@ mkActions =
     ,AD "NewPackage" (__ "_New...") Nothing Nothing
         (showWorkspace >> workspaceTry workspacePackageNew) [] False
     ,AD "AddPackage" (__ "_Add...") Nothing Nothing
-        (showWorkspace >> workspaceTry workspaceAddPackage) [] False
+        ((showWorkspace >> workspaceTry workspaceAddPackage) >> rebuildWorkspaceInfo) [] False
 --    ,AD "RecentPackages" "_Recent Packages" Nothing Nothing (return ()) [] False
     ,AD "EditPackage" (__ "_Edit") Nothing Nothing
         (packageTry packageEdit) [] False
