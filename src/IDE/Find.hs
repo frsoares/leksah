@@ -20,6 +20,7 @@ module IDE.Find (
 ,   focusFindEntry
 ,   editFindInc
 ,   editGotoLine
+,   editCenterView
 ,   FindState(..)
 ,   getFindState
 ,   setFindState
@@ -703,6 +704,24 @@ editGotoLine = do
     (fb,_) <- needFindbar
     entry <- liftIO $ getLineEntry fb
     liftIO $ widgetGrabFocus entry
+
+editCenterView :: IDEAction
+editCenterView = do
+  mbBuf <- maybeActiveBuf
+  case mbBuf of
+    Nothing     -> return ()
+    Just buf    -> do
+                   gtkBuf <-  getBuffer (sourceView buf)
+                   mark <- getInsertMark gtkBuf
+                   curCenterView <- readIDE centerViewState
+                   modifyIDE_ (\ide -> ide{centerViewState = (curCenterView + 1) `mod` 3})
+                   case curCenterView of
+                     0 -> scrollToMark (sourceView buf) mark 0.0 (Just (0.0,0.0))
+                     1 -> scrollToMark (sourceView buf) mark 0.0 (Just (0.5,0.5))
+                     2 -> scrollToMark (sourceView buf) mark 0.0 (Just (1.0,1.0))
+                     _ -> error "Unknown value for centerView"
+
+
 
 getLineEntry, getReplaceEntry, getFindEntry :: Toolbar -> IO Widget
 getLineEntry    = getWidget "gotoLineEntryTool"

@@ -293,6 +293,7 @@ startMainWindow yiControl sessionFP mbWorkspaceFP sourceFPs startupPrefs isFirst
           ,   vcsData           =   (Map.empty, Nothing)
           ,   logLaunches       =   Map.empty
           ,   autoCommand       =   return ()
+          ,   centerViewState   =   0
     }
     ideR             <-  newIORef ide
     menuDescription' <- menuDescription
